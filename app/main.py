@@ -382,35 +382,8 @@ if __name__ == "__main__":
     os.makedirs(os.path.join(BASE_DIR, "export", "projects"), exist_ok=True)
     # Compatibility link for legacy media access if needed
     os.makedirs(os.path.join(BASE_DIR, "export", "media"), exist_ok=True)
-    
-    # --- ULTRA-STRICT MOBILE TUNNEL (NGROK) ---
-    public_url = None
-    os.system('cls' if os.name == 'nt' else 'clear')
-    
-    try:
-        from pyngrok import ngrok, conf
-        token = os.getenv("NGROK_AUTHTOKEN")
-        if token and token.strip() and token != "your_token_here":
-            # Clean Start: Kill all existing sessions
-            ngrok.kill() 
-            clean_token = token.strip()
-            
-            # Diagnostic: Verifying Identity
-            masked = "*" * (len(clean_token) - 4) + clean_token[-4:]
-            print(f"📡 [NGROK] Initializing Strict Cloud Portal (Token: {masked})...")
-            
-            conf.get_default().auth_token = clean_token
-            public_url = ngrok.connect(8000).public_url
-    except Exception as e:
-        print("\n" + "!"*60)
-        print("❌ [STRICT ERROR] NGROK AUTHENTICATION FAILED")
-        print(f"DETAILS: {e}")
-        print("\n💡 ACTION REQUIRED:")
-        print("1. Go to: https://dashboard.ngrok.com/get-started/your-authtoken")
-        print("2. Click 'Reset Authtoken' to get a fresh code.")
-        print("3. Paste the NEW code into your .env file.")
-        print("!"*60 + "\n")
 
+    # --- NETWORK IDENTITY ---
     import socket
     local_ip = "127.0.0.1"
     try:
@@ -421,28 +394,57 @@ if __name__ == "__main__":
     except:
         network_ip = "localhost"
 
+    # --- PROFESSIONAL MOBILE TUNNEL (NGROK) ---
+    public_url = None
+    raw_url = None
+    try:
+        from pyngrok import ngrok, conf
+        token = os.getenv("NGROK_AUTHTOKEN")
+        if token and token.strip() and token != "your_token_here":
+            ngrok.kill() 
+            clean_token = token.strip()
+            
+            masked = "*" * (len(clean_token) - 4) + clean_token[-4:]
+            print(f"📡 [NGROK] Initializing Professional Tunnel (Token: {masked})...")
+            
+            conf.get_default().auth_token = clean_token
+            
+            domain = os.getenv("NGROK_DOMAIN")
+            if domain and domain.strip():
+                print(f"🔗 [NGROK] Mounting Static Domain: {domain.strip()}...")
+                raw_url = ngrok.connect(8000, domain=domain.strip()).public_url
+            else:
+                raw_url = ngrok.connect(8000).public_url
+            
+            # Application of the "Proper" (Short) link
+            public_url = raw_url
+    except Exception as e:
+        print(f"❌ [NGROK ERROR] {e}")
+
     print("\n" + "╔" + "═"*58 + "╗")
     print("║          CONTENTFLOW STUDIO  |  PRODUCTION SUITE          ║")
     print("╠" + "═"*58 + "╣")
-    print(f"║  💻 Local:    http://localhost:8000                        ║")
-    print(f"║  📶 Network:  http://{network_ip:<27}      ║")
+    print(f"║  💻 [PC ACCESS]       http://localhost:8000                ║")
+    print(f"║  📶 [NETWORK ACCESS]  http://{network_ip:<27}      ║")
     if public_url:
-        print(f"║  🔗 Remote:   {public_url:<43} ║")
+        print(f"║  🔗 [REMOTE ACCESS]   {public_url:<35}  ║")
     else:
-        print(f"║  🔗 Remote:   [Not Active — Check NGROK_AUTHTOKEN]         ║")
+        print(f"║  🔗 [REMOTE ACCESS]   [Check NGROK_AUTHTOKEN in .env]      ║")
     print("╚" + "═"*58 + "╝\n")
 
     try:
         demo.launch(
             server_name="0.0.0.0",
             server_port=8000,
+            share=False,
             allowed_paths=[os.path.join(BASE_DIR, "export")]
         )
     finally:
-        if public_url:
+        if raw_url:
             print("\n♻️ Shutting down tunnel...")
             try:
-                ngrok.disconnect(public_url)
+                from pyngrok import ngrok
+                ngrok.disconnect(raw_url)
                 ngrok.kill()
             except:
                 pass
